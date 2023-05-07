@@ -136,6 +136,13 @@ public class Enemy : MonoBehaviour
         transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * turnRate);
     }
 
+    public void TurnTo(Vector3 target, float turnRate) {
+        Vector3 dir = target - transform.position;
+        Quaternion targetRot = Quaternion.LookRotation(dir, Vector3.up);
+
+        transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * turnRate);
+    }
+
     protected virtual void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.white;

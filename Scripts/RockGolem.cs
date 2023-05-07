@@ -6,20 +6,22 @@ public class RockGolem : Enemy
 {
     public enum GolemState { Hidden, Rising, Fighting }
     public GolemState bossState = GolemState.Hidden;
-    public Transform hiddenTransform;
-    public Transform risenTransform;
+    public Transform hiddenTransform, risenTransform;
 
-    public GameObject bomberPrefab;
+    public GameObject[] minionPrefabs;
+    public float[] minionSpawnWeights;
 
     public float riseSpeed = 1f;
     public int hp, maxHealth;
     public float fireDelay = 0.5f;
     public float spawnInterval = 5f;
     public float spawnRadius = 6f;
+    public float stunDuration = 2f;
     
     private float risingElapsedTime = 0f;
     private HitDetector hitDetector;
     private bool isSummoning = false;
+    private bool isCharging = false;
 
     protected List<LaunchProjectile> rifles;
 
@@ -30,12 +32,12 @@ public class RockGolem : Enemy
         transform.position = hiddenTransform.position;
         hitDetector = gameObject.GetComponent<HitDetector>();
         hp = maxHealth = hitDetector.health;
+        gameObject.GetComponentInChildren<Canvas>().enabled = false;
         rifles = new List<LaunchProjectile>(GetComponentsInChildren<LaunchProjectile>());
     }
 
     protected override void Update()
     {
-        hp = hitDetector.health;
         switch (bossState)
         {
             case GolemState.Hidden:
@@ -65,52 +67,46 @@ public class RockGolem : Enemy
         risingElapsedTime += Time.deltaTime;
         float t = risingElapsedTime / riseSpeed;
         transform.position = Vector3.Lerp(hiddenTransform.position, risenTransform.position, t);
+        
+        // raise the gates!
+        gameObject.GetComponent<BossHandle>().CloseDoor();
+
+        transform.Rotate(new Vector3(0, 90f / t * Time.deltaTime, 0), Space.World);
 
         if (t >= 1f)
         {
             bossState = GolemState.Fighting;
+            gameObject.GetComponentInChildren<Canvas>().enabled = true;
         }
     }
 
     private void FightPlayer()
     {
-        gameObject.GetComponent<UnityEngine.AI.NavMeshAgent>().enabled = true;
-        agent.SetDestination(player.position);
         float distance = Vector3.Distance(player.position, hiddenTransform.position);
 
         hp = hitDetector.health;
-        float healthPercentage = (float)hp / maxHealth;
+        float hpPct = (float)hp / maxHealth;
 
-        if (healthPercentage < 0.25f)
+        if (hpPct < 0.25f)
         {
             // Stage 3: Charge
-            charge();
+            gameObject.GetComponent<UnityEngine.AI.NavMeshAgent>().enabled = false;
+            if (!isCharging) StartCoroutine(Charge());
         }
-        else if (healthPercentage < 0.65f)
+        else if (hpPct < 0.65f)
         {
             // Stage 2: Summon minions
-            summonMinions();
+            gameObject.GetComponent<UnityEngine.AI.NavMeshAgent>().enabled = true;
+            agent.SetDestination(player.position);
+            if (!isSummoning) StartCoroutine(Summon());
         }
         else
         {
             // Stage 1: Shoot
-            shoot();
+            gameObject.GetComponent<UnityEngine.AI.NavMeshAgent>().enabled = true;
+            agent.SetDestination(player.position);
+            StartCoroutine(ShootRiflesWithDelay());
         }
-    }
-
-    protected override void shoot() {
-        // launchProjectile
-        StartCoroutine(ShootRiflesWithDelay());
-    }
-
-    private void summonMinions()
-    {
-        if (!isSummoning) StartCoroutine(Summon(bomberPrefab));
-    }
-
-    private void charge()
-    {
-
     }
 
     private IEnumerator ShootRiflesWithDelay()
@@ -122,17 +118,58 @@ public class RockGolem : Enemy
         }
     }
 
-    private IEnumerator Summon(GameObject minionPrefab)
+    private IEnumerator Summon()
     {
         isSummoning = true;
 
         yield return new WaitForSeconds(spawnInterval);
 
-        Vector3 spawnPosition = transform.position + (Random.insideUnitSphere * spawnRadius);
+        float totalWeight = 100; // weights need to sum to 100
+
+        float randomWeight = Random.Range(0, totalWeight);
+        float acc = 0;
+        int idx = 0;
+
+        for (int i = 0; i < minionPrefabs.Length; i++)
+        {
+            acc += minionSpawnWeights[i];
+            if (randomWeight <= acc)
+            {
+                idx = i;
+                break;
+            }
+        }
+
+        GameObject chosenPrefab = minionPrefabs[idx];
+
+        Vector3 spawnPosition = transform.position + (Random.onUnitSphere * spawnRadius);
         spawnPosition.y = transform.position.y;
 
-        Instantiate(minionPrefab, spawnPosition, Quaternion.identity);
+        Instantiate(chosenPrefab, spawnPosition, Quaternion.identity);
 
         isSummoning = false;
     }
+
+    private IEnumerator Charge()
+    {
+        isCharging = true;
+        float elapsedTime = 0f;
+
+        Vector3 dir = (player.position - transform.position).normalized;
+        dir.y = 0;
+
+        transform.LookAt(new Vector3(player.position.x, transform.position.y, player.position.z));
+
+        while (elapsedTime < 2f && Vector3.Distance(transform.position, player.position) > 0.5f)
+        {
+            transform.position += dir * 15f * Time.deltaTime;
+
+            elapsedTime += Time.deltaTime;
+            yield return null;
+        }
+
+        yield return new WaitForSeconds(stunDuration);
+        isCharging = false;
+    }
 }
+
