@@ -262,6 +262,10 @@ public class FPSController : MonoBehaviour
         //actually perform the movement
         transform.Translate(speed * Time.deltaTime, Space.Self);
 
+        //if player manages to Translate into the floor then move up a little bit
+        if (Physics.SphereCast(transform.position, .5f, Vector3.down, out hit, .69f)) {
+            transform.Translate(new Vector3(0, .7f - hit.distance, 0));
+        }
 
     }
 
