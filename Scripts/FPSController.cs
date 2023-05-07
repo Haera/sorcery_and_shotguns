@@ -21,11 +21,19 @@ public class FPSController : MonoBehaviour
     public GameObject castHit;
     private GameObject tempHit;
 
-    private int currentWeapon = 3;
+    private int currentWeapon = 1;
+    private GameObject equippedWeapon;
+    private bool unlockedRapid = false;
+    private bool unlockedHitscan = false;
+    private bool unlockedRpg = false;
     public GameObject singleProjectile;
+    public GameObject singleshot;
     public GameObject hitscanProjectile;
+    public GameObject hitscan;
     public GameObject rapidProjectile;
+    public GameObject rapidshot;
     public GameObject rpgProjectile;
+    public GameObject rpg;
     private float currentSingleDelay = 0;
     private float currentHitscanDelay = 0;
     private float currentRapidDelay = 0;
@@ -66,6 +74,10 @@ public class FPSController : MonoBehaviour
         fuelSlider = fuelBar.GetComponent<Slider>();
 
         eti_textMeshPro = E_to_interact.GetComponent<TMPro.TextMeshProUGUI>();
+        
+        equippedWeapon = singleshot;
+        equip(singleshot);
+        
     }
 
     void Update()
@@ -74,6 +86,8 @@ public class FPSController : MonoBehaviour
         Look();
         //handles shooting
         Shoot();
+        //handles all other movement
+        Move();
 
         //displaying fuel -- 0 index inside of canvas
         //canv.GetComponentsInChildren<TMPro.TextMeshProUGUI>()[0].text = "Fuel: " + fuel.ToString();
@@ -82,11 +96,6 @@ public class FPSController : MonoBehaviour
         //canv.GetComponentsInChildren<TMPro.TextMeshProUGUI>()[1].text = "HP: " + health.ToString();
         healthSlider.value = health / maxHealth;
 
-    }
-
-    void FixedUpdate() {
-        //handles all other movement
-        Move();
     }
 
     private void Look() {
@@ -149,7 +158,7 @@ public class FPSController : MonoBehaviour
             //jumping
             if (Input.GetKeyDown(KeyCode.Space) && jumping == 0) {
                 yVelocity = jumpHeight;
-                jumping = 8;
+                jumping = 6;
             }
 
         } else {
@@ -200,7 +209,15 @@ public class FPSController : MonoBehaviour
 
         //flight
         if (dashTime <= .05f && Input.GetKey(KeyCode.Mouse1) && fuel > .05f) {
-            speed += camObj.transform.localRotation * Vector3.forward * fuelPower;
+            if (!grounded || camObj.transform.localRotation.z < 0) {//if your on the ground you can fly down
+                speed += camObj.transform.localRotation * Vector3.forward * fuelPower;
+            } else {//otherwise no flying through the floor for you
+                Vector3 thrust = camObj.transform.localRotation * Vector3.forward * fuelPower;
+                if (thrust.y < 0) {
+                    thrust.y = 0;
+                }
+                speed += thrust;
+            }
             fuel -= Time.deltaTime;
         }
 
@@ -221,7 +238,9 @@ public class FPSController : MonoBehaviour
             Vector3 oldSpeed = speed;
             speed = Vector3.ProjectOnPlane(this.transform.TransformVector(speed), hit.normal);
             speed = this.transform.InverseTransformVector(speed);
-            sloped = true;
+            if (Vector3.Angle(Vector3.up, hit.normal) < maxScalableAngle) {
+                sloped = true;
+            }
             
         }
 
@@ -250,12 +269,16 @@ public class FPSController : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.Alpha1)) {//single shot
             currentWeapon = 1;
-        } else if (Input.GetKeyDown(KeyCode.Alpha2)) {//rapid shot
+            equip(singleshot);
+        } else if (Input.GetKeyDown(KeyCode.Alpha2) && unlockedRapid) {//rapid shot
             currentWeapon = 2;
-        } else if (Input.GetKeyDown(KeyCode.Alpha3)) {//hitscan
+            equip(rapidshot);
+        } else if (Input.GetKeyDown(KeyCode.Alpha3) && unlockedHitscan) {//hitscan
             currentWeapon = 3;
-        } else if (Input.GetKeyDown(KeyCode.Alpha4)) {//rpg
+            equip(hitscan);
+        } else if (Input.GetKeyDown(KeyCode.Alpha4) && unlockedRpg) {//rpg
             currentWeapon = 4;
+            equip(rpg);
         }
 
         if (Input.GetKey(KeyCode.Mouse0)) {
@@ -272,7 +295,8 @@ public class FPSController : MonoBehaviour
             } else if (currentWeapon == 3 && currentHitscanDelay <= 0) {//hitscan
 
                 RaycastHit hit;
-                if (Physics.Raycast(firingPoint.position, camObj.transform.forward, out hit, 9999f)) {//hit
+                float hitscanRange = 1000f;
+                if (Physics.Raycast(firingPoint.position, firingPoint.forward, out hit, hitscanRange)) {//hit
                     //this is just the visual of the projectile
                     Vector3[] tempArray = {firingPoint.position, hit.point};
                     hitscanProjectile.GetComponent<LineRenderer>().SetPositions(tempArray);
@@ -291,7 +315,7 @@ public class FPSController : MonoBehaviour
 
                 } else {//miss
                     //this is just the visual of the projectile
-                    Vector3[] tempArray = {firingPoint.position, camObj.transform.forward * 9999f};
+                    Vector3[] tempArray = {firingPoint.position, firingPoint.forward + (firingPoint.forward * hitscanRange)};
                     hitscanProjectile.GetComponent<LineRenderer>().SetPositions(tempArray);
                 }
                 Instantiate(hitscanProjectile);
@@ -341,6 +365,23 @@ public class FPSController : MonoBehaviour
 
     public float getHealth () {
         return health;
+    }
+    
+    public void unlockWeapon(int weapon) {
+        if (weapon == 2) {
+            unlockedRapid = true;
+        } else if (weapon == 3) {
+            unlockedHitscan = true;
+        } else if (weapon == 4) {
+            unlockedRpg = true;
+        }
+    }
+
+    //handles making the correct weapon visible
+    public void equip(GameObject equipping) {
+        equippedWeapon.SetActive(false);
+        equippedWeapon = equipping;
+        equippedWeapon.SetActive(true);
     }
 
 }
