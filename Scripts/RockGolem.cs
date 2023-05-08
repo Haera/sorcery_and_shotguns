@@ -19,6 +19,7 @@ public class RockGolem : Enemy
     
     private float risingElapsedTime = 0f;
     private HitDetector hitDetector;
+    private FPSController playerCtrl;
     private bool isSummoning = false;
 
     protected List<LaunchProjectile> rifles;
@@ -30,6 +31,8 @@ public class RockGolem : Enemy
         transform.position = hiddenTransform.position;
         hitDetector = gameObject.GetComponent<HitDetector>();
         hp = maxHealth = hitDetector.health;
+        gameObject.GetComponentInChildren<Canvas>().enabled = false;
+        playerCtrl = player.gameObject.GetComponent<FPSController>();
         rifles = new List<LaunchProjectile>(GetComponentsInChildren<LaunchProjectile>());
     }
 
@@ -135,4 +138,35 @@ public class RockGolem : Enemy
 
         isSummoning = false;
     }
+
+    private IEnumerator Charge()
+    {
+        isCharging = true;
+        float elapsedTime = 0f;
+
+        Vector3 dir = (player.position - transform.position).normalized;
+        dir.y = 0;
+
+        transform.LookAt(new Vector3(player.position.x, transform.position.y, player.position.z));
+
+        while (elapsedTime < 2f && Vector3.Distance(transform.position, player.position) > 0.5f)
+        {
+            transform.position += dir * 15f * Time.deltaTime;
+
+            elapsedTime += Time.deltaTime;
+            yield return null;
+        }
+
+        yield return new WaitForSeconds(stunDuration);
+        isCharging = false;
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (collision.gameObject.CompareTag("Player"))
+        {
+            if (playerCtrl != null) playerCtrl.damage(5);
+        }
+    }
 }
+
