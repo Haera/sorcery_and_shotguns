@@ -74,10 +74,6 @@ public class FPSController : MonoBehaviour
     public AudioClip sound_playerSound2;
     public AudioClip sound_rpgShoot;
 
-    public GameObject jetpack;
-    private AudioSource jetpackAudio;
-
-
     public GameObject backgroundMusicObj;
     private MusicUpdate musicUpdate;
     private int currentSong = 3;
@@ -112,7 +108,6 @@ public class FPSController : MonoBehaviour
         equippedWeapon = singleshot;
         equip(singleshot);
 
-        jetpackAudio = jetpack.GetComponent<AudioSource>();
         musicUpdate = backgroundMusicObj.GetComponent<MusicUpdate>();
         Time.timeScale = 1f;       
         

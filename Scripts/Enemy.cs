@@ -18,6 +18,19 @@ public class Enemy : MonoBehaviour
     private FPSController fpsc;
     private bool isAggro = false;
 
+    public string sound_enemy1_1 = "Enemy1_1.wav";
+    public string sound_enemy1_2 = "Enemy1_2.wav";
+    public string sound_enemy1_3 = "Enemy1_3.wav";
+    public string sound_enemy1_4 = "Enemy1_4.wav";
+    public string sound_enemy1_5 = "Enemy1_5.wav";
+    public string sound_enemy2_1 = "Enemy2_1.wav";
+    public string sound_enemy2_2 = "Enemy2_2.wav";
+    public string sound_enemy2_3 = "Enemy2_3.wav";
+    public string sound_enemy2_4 = "Enemy2_4.wav";
+    public string sound_enemy2_5 = "Enemy2_5.wav";
+    public string sound_drone1 = "Drone_Passive.wav";
+    public string sound_drone2 = "Drone_Aggressive.wav";
+
     protected virtual void Start()
     {
         agent = GetComponent<UnityEngine.AI.NavMeshAgent>();
@@ -159,6 +172,9 @@ public class Enemy : MonoBehaviour
         Gizmos.DrawWireSphere(transform.position, shootRange);
     }
 
-    
+    public void playSound (string clipName) {
+        AudioClip clip = (AudioClip)Resources.Load("Lewis Sounds/Sound FX/"+clipName);
+        GetComponent<AudioSource>().PlayOneShot(clip, 1f);
+    }
     
 }
