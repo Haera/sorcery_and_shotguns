@@ -15,9 +15,9 @@ public class ProjectileTravel : MonoBehaviour
     }
 
     private void OnTriggerEnter(Collider other) {
-        if (other.GetComponent<FPSController>() != null) {
+        if (other.GetComponent<HitDetector>() != null) {
 
-            other.GetComponent<FPSController>().damage(damage);
+            other.GetComponent<HitDetector>().damage(damage);
             Destroy(this.gameObject);
 
         }

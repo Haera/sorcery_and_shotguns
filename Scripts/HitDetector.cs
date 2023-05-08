@@ -12,6 +12,7 @@ public class HitDetector : MonoBehaviour
 
    public Slider healthBar;
 
+   public GameObject player;
    //private ProgressBar healthBar;
 
    //current implementation means each enemy has exactly one HitDetector on it, could be changed using a extra enemy stats script if we want to
@@ -27,6 +28,7 @@ public class HitDetector : MonoBehaviour
    public void damage(int val) {
       health -= val;
       if (health <= 0) {
+         player.GetComponent<FPSController>().aggroCount--;
          Destroy(this.gameObject);
       }
    }

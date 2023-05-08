@@ -14,12 +14,16 @@ public class Enemy : MonoBehaviour
 
     public EnemyState currentState = EnemyState.Idle;
     public LaunchProjectile rifle;
+    public GameObject playerObj;
+    private FPSController fpsc;
+    private bool isAggro = false;
 
     protected virtual void Start()
     {
         agent = GetComponent<UnityEngine.AI.NavMeshAgent>();
         rifle = GetComponentInChildren<LaunchProjectile>();
         player = GameObject.FindWithTag("Player").transform;
+        fpsc = playerObj.GetComponent<FPSController>();
         //currentState = EnemyState.Patrol;
     }
 
@@ -91,6 +95,10 @@ public class Enemy : MonoBehaviour
 
     protected void patrol()
     {
+        if(isAggro){
+            fpsc.aggroCount--;
+            isAggro = false;
+        }
         if (!dstFound) findDst();
         //if (gameObject.GetComponent<UnityEngine.AI.NavMeshAgent>().enabled == true) 
         agent.SetDestination(dst);
@@ -100,6 +108,10 @@ public class Enemy : MonoBehaviour
 
     protected virtual void chase()
     {
+        if(!isAggro){
+            fpsc.aggroCount++;
+            isAggro = true;
+        }
         //if (gameObject.GetComponent<UnityEngine.AI.NavMeshAgent>().enabled == true) 
         agent.SetDestination(player.position);
         // smooth this later..
@@ -131,13 +143,6 @@ public class Enemy : MonoBehaviour
     // it's like transform.LookAt but way cooler (and smoother..)
     public void TurnTo(Transform target, float turnRate) {
         Vector3 dir = target.position - transform.position;
-        Quaternion targetRot = Quaternion.LookRotation(dir, Vector3.up);
-
-        transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * turnRate);
-    }
-
-    public void TurnTo(Vector3 target, float turnRate) {
-        Vector3 dir = target - transform.position;
         Quaternion targetRot = Quaternion.LookRotation(dir, Vector3.up);
 
         transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * turnRate);

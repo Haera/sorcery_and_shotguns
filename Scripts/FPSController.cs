@@ -58,8 +58,41 @@ public class FPSController : MonoBehaviour
     public float fuelPower;//how far 1 fuel will get you
     public float fuelBurnRate;//rate of fuel use
 
-    void Start()
-    {
+    AudioSource audioSource;   
+
+    public AudioClip sound_dash;
+    public AudioClip sound_footstep1;
+    public AudioClip sound_footstep2;
+    public AudioClip sound_gun1;
+    public AudioClip sound_gun2;
+    public AudioClip sound_gun3;
+    public AudioClip sound_jetpack;
+    public AudioClip sound_jetpackEmpty;
+    public AudioClip sound_jump;
+    public AudioClip sound_land;
+    public AudioClip sound_playerSound1;
+    public AudioClip sound_playerSound2;
+    public AudioClip sound_rpgShoot;
+
+    public GameObject jetpack;
+    private AudioSource jetpackAudio;
+
+
+    public GameObject backgroundMusicObj;
+    private MusicUpdate musicUpdate;
+    private int currentSong = 3;
+
+    public float timeBetweenFootsteps = 0.350f;
+    private float footstepElapsed = 0f;
+    
+    private bool wasGrounded = false;
+    private bool jetpackPlaying = false;
+
+    [HideInInspector]
+    public int aggroCount = 0;
+
+
+    void Start() {
         //locks cursor into the game window
         Cursor.lockState = CursorLockMode.Confined;
 
@@ -74,9 +107,14 @@ public class FPSController : MonoBehaviour
         fuelSlider = fuelBar.GetComponent<Slider>();
 
         eti_textMeshPro = E_to_interact.GetComponent<TMPro.TextMeshProUGUI>();
-        
+        audioSource = GetComponent<AudioSource>();
+
         equippedWeapon = singleshot;
         equip(singleshot);
+
+        jetpackAudio = jetpack.GetComponent<AudioSource>();
+        musicUpdate = backgroundMusicObj.GetComponent<MusicUpdate>();
+        Time.timeScale = 1f;       
         
     }
 
@@ -89,6 +127,7 @@ public class FPSController : MonoBehaviour
         //handles all other movement
         Move();
 
+        updateMusic();
         //displaying fuel -- 0 index inside of canvas
         //canv.GetComponentsInChildren<TMPro.TextMeshProUGUI>()[0].text = "Fuel: " + fuel.ToString();
         fuelSlider.value = fuel / fuelMax;
@@ -148,7 +187,12 @@ public class FPSController : MonoBehaviour
             yVelocity = 0f;
             jumpCount = jumpMax;
             fuel = fuelMax;
+            if(!wasGrounded){
+                playSound(sound_land);
+            }
             grounded = true;
+            wasGrounded = true;
+
 
             //resetting available dashes
             if (dashCount < dashMax && dashTime <= .05f) {
@@ -159,6 +203,8 @@ public class FPSController : MonoBehaviour
             if (Input.GetKeyDown(KeyCode.Space) && jumping == 0) {
                 yVelocity = jumpHeight;
                 jumping = 6;
+                playSound(sound_jump);
+                wasGrounded = false;
             }
 
         } else {
@@ -170,6 +216,8 @@ public class FPSController : MonoBehaviour
             if (Input.GetKeyDown(KeyCode.Space) && jumpCount > 0) {
                 jumpCount -= 1;
                 yVelocity = jumpHeight;
+                playSound(sound_jump);
+                wasGrounded = false;
             }
 
         }
@@ -177,24 +225,54 @@ public class FPSController : MonoBehaviour
 
         Vector3 speed = new Vector3(0f, 0f, 0f);
 
+        bool walking = false;
         //standard movement
         if (Input.GetKey(KeyCode.W)) {
             speed += Vector3.forward * moveSpeed;
+            walking = true;
         }
         if (Input.GetKey(KeyCode.A)) {
             speed += Vector3.left * moveSpeed;
+            walking = true;
         }
         if (Input.GetKey(KeyCode.S)) {
             speed += Vector3.back * moveSpeed;
+            walking = true;
         }
         if (Input.GetKey(KeyCode.D)) {
             speed += Vector3.right * moveSpeed;
+            walking = true;
+        }
+
+        if(walking == true && wasGrounded){
+            if(footstepElapsed == 0f){
+                footstepElapsed = Time.time;
+                float r = Random.Range(0f,1f);
+                if (r < 0.5f) {
+                    playSound(sound_footstep1);
+                } else {
+                    playSound(sound_footstep2);
+                }
+            } else {
+                if(Time.time - footstepElapsed >= timeBetweenFootsteps){
+                    float r = Random.Range(0f,1f);
+                    if (r < 0.5f) {
+                        playSound(sound_footstep1);
+                    } else {
+                        playSound(sound_footstep2);
+                    }
+                    footstepElapsed = Time.time;
+                }
+            }
+        }else{
+            footstepElapsed = 0;
         }
 
         //dashing
         if (Input.GetKeyDown(KeyCode.LeftShift) && dashTime <= .05f && dashCount > 0) {
             dashTime += dashDuration;
             dashCount -= 1;
+            playSound(sound_dash);
         } 
 
         //applying gravity
@@ -209,6 +287,15 @@ public class FPSController : MonoBehaviour
 
         //flight
         if (dashTime <= .05f && Input.GetKey(KeyCode.Mouse1) && fuel > .05f) {
+
+            if(!jetpackPlaying || audioSource.clip != sound_jetpack){
+                //jetpackAudio.clip = sound_jetpack;
+                //jetpackAudio.Play();
+                audioSource.loop = true;
+                audioSource.clip = sound_jetpack;
+                audioSource.Play();
+                jetpackPlaying = true;
+            }
             if (!grounded || camObj.transform.localRotation.z < 0) {//if your on the ground you can fly down
                 speed += camObj.transform.localRotation * Vector3.forward * fuelPower;
             } else {//otherwise no flying through the floor for you
@@ -219,6 +306,22 @@ public class FPSController : MonoBehaviour
                 speed += thrust;
             }
             fuel -= Time.deltaTime;
+            
+        } else if (Input.GetKey(KeyCode.Mouse1) && fuel < .05f) {
+            if(!jetpackPlaying || audioSource.clip != sound_jetpackEmpty){
+                //jetpackAudio.clip = sound_jetpackEmpty;
+                //jetpackAudio.Play();
+                audioSource.loop = true;
+                audioSource.clip = sound_jetpackEmpty;
+                audioSource.Play();
+                jetpackPlaying = true;
+            }
+        } else if (!Input.GetKey(KeyCode.Mouse1) && jetpackPlaying) {
+            //jetpackAudio.Stop();
+            audioSource.loop = false;
+            audioSource.Stop();
+            audioSource.Stop();
+            jetpackPlaying = false;
         }
 
         //used for casting
@@ -233,7 +336,7 @@ public class FPSController : MonoBehaviour
         bool sloped = false;
 
         //case where ground is sloped
-        if (Physics.SphereCast(transform.position, .5f, Vector3.down, out hit, .7f) && jumping == 0 && hit.normal != Vector3.up) {
+        if (Physics.SphereCast(transform.position, .5f, Vector3.down, out hit, .5f) && jumping == 0 && hit.normal != Vector3.up) {
             
             Vector3 oldSpeed = speed;
             speed = Vector3.ProjectOnPlane(this.transform.TransformVector(speed), hit.normal);
@@ -241,7 +344,6 @@ public class FPSController : MonoBehaviour
             if (Vector3.Angle(Vector3.up, hit.normal) < maxScalableAngle) {
                 sloped = true;
             }
-            
         }
 
         //check y dir
@@ -267,6 +369,7 @@ public class FPSController : MonoBehaviour
             transform.Translate(new Vector3(0, .65f - hit.distance, 0));
         }
 
+
     }
 
     private void Shoot() {
@@ -287,16 +390,17 @@ public class FPSController : MonoBehaviour
 
         if (Input.GetKey(KeyCode.Mouse0)) {
             if (currentWeapon == 1 && currentSingleDelay <= 0) {//single shot
-
+                playSound(sound_gun1);
                 Instantiate(singleProjectile, firingPoint.position, camObj.transform.rotation);
 
                 currentSingleDelay = singleDelay;
             } else if (currentWeapon == 2 && currentRapidDelay <= 0) {//rapid shot
-
+                playSound(sound_gun1);
                 Instantiate(rapidProjectile, firingPoint.position, camObj.transform.rotation);
 
                 currentRapidDelay = rapidDelay;
             } else if (currentWeapon == 3 && currentHitscanDelay <= 0) {//hitscan
+                playSound(sound_gun3);
 
                 RaycastHit hit;
                 float hitscanRange = 1000f;
@@ -326,7 +430,7 @@ public class FPSController : MonoBehaviour
 
                 currentHitscanDelay = hitscanDelay;
             } else if (currentWeapon == 4 && currentRpgDelay <= 0) {//rpg
-
+                playSound(sound_rpgShoot);
                 Instantiate(rpgProjectile, firingPoint.position, camObj.transform.rotation);
 
                 currentRpgDelay = rpgDelay;
@@ -351,6 +455,13 @@ public class FPSController : MonoBehaviour
             //jumpCount = jumpMax;
             //yVelocity = 0;
             //redo enemies
+        }else{
+            float r = Random.Range(0f,1f);
+            if (r < 0.5f) {
+                playSound(sound_playerSound1);
+            } else {
+                playSound(sound_playerSound2);
+            }
         }
     }
 
@@ -370,7 +481,11 @@ public class FPSController : MonoBehaviour
     public float getHealth () {
         return health;
     }
-    
+
+    public void playSound (AudioClip audioClip) {
+        audioSource.PlayOneShot(audioClip, 1f);
+    }
+
     public void unlockWeapon(int weapon) {
         if (weapon == 2) {
             unlockedRapid = true;
@@ -388,4 +503,15 @@ public class FPSController : MonoBehaviour
         equippedWeapon.SetActive(true);
     }
 
+    public void updateMusic () {
+        Debug.Log(aggroCount);
+        if(backgroundMusicObj.GetComponent<MusicUpdate>().getCurrentSong() != currentSong){
+            currentSong = backgroundMusicObj.GetComponent<MusicUpdate>().getCurrentSong();
+        }
+        if(aggroCount == 0 && currentSong != 3){
+            backgroundMusicObj.GetComponent<MusicUpdate>().playSong(3);
+        } else if (aggroCount > 0 && currentSong != 2) {
+            backgroundMusicObj.GetComponent<MusicUpdate>().playSong(2);
+        }
+    }
 }

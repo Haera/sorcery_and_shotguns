@@ -11,6 +11,9 @@ public class PlayerDeathManager : MonoBehaviour
     public Button continueButton;
     public Button quitButton;
     private FPSController playerController;
+    private AudioSource audioSource;
+    public AudioClip sound_playerDeath;
+    private bool clipPlaying = false;
 
     void Start() {
         playerController = player.GetComponent<FPSController>();
@@ -21,6 +24,8 @@ public class PlayerDeathManager : MonoBehaviour
 		Button continueBtn = continueButton.GetComponent<Button>();
 		continueBtn.onClick.AddListener(reloadCheckpoint);
 
+        audioSource = player.GetComponent<AudioSource>();
+
         deathScreen.SetActive(false);
     }
 
@@ -29,6 +34,10 @@ public class PlayerDeathManager : MonoBehaviour
             Time.timeScale = 0f;
             deathScreen.SetActive(true);
             Cursor.visible = true;
+            if(!clipPlaying){
+                audioSource.PlayOneShot(sound_playerDeath);
+                clipPlaying = true;
+            }
         }
     }
 
@@ -38,6 +47,7 @@ public class PlayerDeathManager : MonoBehaviour
         deathScreen.SetActive(false);
         SceneManager.LoadScene("CMSC425Game");
         Time.timeScale = 1f;
+        clipPlaying = false;
     }
 
     public void goToMainMenu() {
