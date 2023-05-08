@@ -233,7 +233,7 @@ public class FPSController : MonoBehaviour
         bool sloped = false;
 
         //case where ground is sloped
-        if (Physics.SphereCast(transform.position, .5f, Vector3.down, out hit, .5f) && jumping == 0 && hit.normal != Vector3.up) {
+        if (Physics.SphereCast(transform.position, .5f, Vector3.down, out hit, .7f) && jumping == 0 && hit.normal != Vector3.up) {
             
             Vector3 oldSpeed = speed;
             speed = Vector3.ProjectOnPlane(this.transform.TransformVector(speed), hit.normal);
@@ -245,17 +245,17 @@ public class FPSController : MonoBehaviour
         }
 
         //check y dir
-        if (!grounded && !sloped && Physics.CapsuleCast(capsuleTop, capsuleBottom, .5f, transform.TransformDirection(new Vector3(0, speed.y, 0)), out hit, speed.y * Time.deltaTime)) {
+        if (!grounded && !sloped && Physics.CapsuleCast(capsuleTop, capsuleBottom, .5f, transform.TransformDirection(new Vector3(0, speed.y, 0)), out hit, Mathf.Abs(speed.y) * Time.deltaTime)) {
             speed = new Vector3(speed.x, 0, speed.z);
         }
 
         //check x dir
-        if (Physics.CapsuleCast(capsuleTop, capsuleBottom, .5f, transform.TransformDirection(new Vector3(speed.x, 0, 0)), out hit, speed.x * Time.deltaTime)) {
+        if (Physics.CapsuleCast(capsuleTop, capsuleBottom, .5f, transform.TransformDirection(new Vector3(speed.x, 0, 0)), out hit, Mathf.Abs(speed.x) * Time.deltaTime)) {
             speed = new Vector3(0, speed.y, speed.z);
         }
 
         //check z dir
-        if (Physics.CapsuleCast(capsuleTop, capsuleBottom, .5f, transform.TransformDirection(new Vector3(0, 0, speed.z)), out hit, speed.z * Time.deltaTime)) {
+        if (Physics.CapsuleCast(capsuleTop, capsuleBottom, .5f, transform.TransformDirection(new Vector3(0, 0, speed.z)), out hit, Mathf.Abs(speed.z) * Time.deltaTime)) {
             speed = new Vector3(speed.x, speed.y, 0);
         }
 
@@ -263,8 +263,8 @@ public class FPSController : MonoBehaviour
         transform.Translate(speed * Time.deltaTime, Space.Self);
 
         //if player manages to Translate into the floor then move up a little bit
-        if (Physics.SphereCast(transform.position, .5f, Vector3.down, out hit, .69f)) {
-            transform.Translate(new Vector3(0, .7f - hit.distance, 0));
+        if (Physics.SphereCast(transform.position, .48f, Vector3.down, out hit, .65f)) {
+            transform.Translate(new Vector3(0, .65f - hit.distance, 0));
         }
 
     }
