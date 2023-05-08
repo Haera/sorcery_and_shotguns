@@ -48,8 +48,8 @@ public class LaunchProjectile : MonoBehaviour
         GameObject projectile = Instantiate(projectilePrefab, transform.position, transform.rotation);
         Projectile projectileScript = projectile.GetComponent<Projectile>();
         float dist = Vector3.Distance(transform.position, player.position);
-        Debug.Log(dist);
         
+        float mult = Mathf.Sqrt(dist)/3f;
 
         //                                       relForce          dmg   type
         //projectileScript.Initialize(new Vector3 (400f, 250f, 0), 5f, "default");
@@ -59,11 +59,10 @@ public class LaunchProjectile : MonoBehaviour
                 Debug.Log("no projectile case: Default");
                 break;
             case ProjectileType.Cannon:
-                float mult = Mathf.Sqrt(dist)/3f;
                 projectileScript.Initialize(new Vector3 (400f * mult, 250f * mult, 0), 20, 300f, type);
                 break;
             case ProjectileType.Bullet:
-                projectileScript.Initialize(new Vector3 (700f, 0, 0), 5, 0f, type);
+                projectileScript.Initialize(new Vector3 (1000f * mult, 0, 0), 20, 0f, type);
                 break;
         }
         

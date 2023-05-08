@@ -11,7 +11,7 @@ public class Enemy : MonoBehaviour
     protected bool dstFound, playerSpotted;
     public float dstRange, visRange, shootRange, meleeRange, meleeRate, turnSpeed;
     protected float meleeCooldown;
-
+    private Vector3 original_pos;
     public EnemyState currentState = EnemyState.Idle;
     public LaunchProjectile rifle;
 
@@ -20,6 +20,7 @@ public class Enemy : MonoBehaviour
         agent = GetComponent<UnityEngine.AI.NavMeshAgent>();
         rifle = GetComponentInChildren<LaunchProjectile>();
         player = GameObject.FindWithTag("Player").transform;
+        original_pos = transform.position;
         //currentState = EnemyState.Patrol;
     }
 
@@ -84,7 +85,7 @@ public class Enemy : MonoBehaviour
         // https://forum.unity.com/threads/centre-of-sphere-for-random-insideunitsphere.83824/
         Vector3 randOff = Random.insideUnitSphere * dstRange;
         randOff.y = 0f;
-        dst = transform.position + randOff;
+        dst = original_pos + randOff;
 
         if (Physics.Raycast(dst, -transform.up, 2f, whatIsGround)) dstFound = true;
     }
@@ -92,16 +93,14 @@ public class Enemy : MonoBehaviour
     protected void patrol()
     {
         if (!dstFound) findDst();
-        //if (gameObject.GetComponent<UnityEngine.AI.NavMeshAgent>().enabled == true) 
-        agent.SetDestination(dst);
+        if (gameObject.GetComponent<UnityEngine.AI.NavMeshAgent>().enabled == true) agent.SetDestination(dst);
 
         if ((transform.position - dst).magnitude < 1f) dstFound = false;
     }
 
     protected virtual void chase()
     {
-        //if (gameObject.GetComponent<UnityEngine.AI.NavMeshAgent>().enabled == true) 
-        agent.SetDestination(player.position);
+        if (gameObject.GetComponent<UnityEngine.AI.NavMeshAgent>().enabled == true) agent.SetDestination(player.position);
         // smooth this later..
         //transform.LookAt(player);
 

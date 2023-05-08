@@ -20,6 +20,7 @@ public class RockGolem : Enemy
     
     private float risingElapsedTime = 0f;
     private HitDetector hitDetector;
+    private FPSController playerCtrl;
     private bool isSummoning = false;
     private bool isCharging = false;
 
@@ -33,6 +34,7 @@ public class RockGolem : Enemy
         hitDetector = gameObject.GetComponent<HitDetector>();
         hp = maxHealth = hitDetector.health;
         gameObject.GetComponentInChildren<Canvas>().enabled = false;
+        playerCtrl = player.gameObject.GetComponent<FPSController>();
         rifles = new List<LaunchProjectile>(GetComponentsInChildren<LaunchProjectile>());
     }
 
@@ -170,6 +172,14 @@ public class RockGolem : Enemy
 
         yield return new WaitForSeconds(stunDuration);
         isCharging = false;
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (collision.gameObject.CompareTag("Player"))
+        {
+            if (playerCtrl != null) playerCtrl.damage(5);
+        }
     }
 }
 

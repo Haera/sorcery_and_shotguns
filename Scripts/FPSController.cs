@@ -58,8 +58,27 @@ public class FPSController : MonoBehaviour
     public float fuelPower;//how far 1 fuel will get you
     public float fuelBurnRate;//rate of fuel use
 
-    void Start()
-    {
+    AudioSource audioSource;   
+
+    public AudioClip sound_dash;
+    public AudioClip sound_footstep1;
+    public AudioClip sound_footstep2;
+    public AudioClip sound_gun1;
+    public AudioClip sound_gun2;
+    public AudioClip sound_gun3;
+    public AudioClip sound_jetpack;
+    public AudioClip sound_jetpackEmpty;
+    public AudioClip sound_jump;
+    public AudioClip sound_land;
+    public AudioClip sound_playerSound1;
+    public AudioClip sound_playerSound2;
+
+    public float timeBetweenFootsteps = 0.350f;
+    private float footstepElapsed = 0f;
+    
+    private bool wasGrounded = false;
+
+    void Start() {
         //locks cursor into the game window
         Cursor.lockState = CursorLockMode.Confined;
 
@@ -74,9 +93,12 @@ public class FPSController : MonoBehaviour
         fuelSlider = fuelBar.GetComponent<Slider>();
 
         eti_textMeshPro = E_to_interact.GetComponent<TMPro.TextMeshProUGUI>();
-        
+        audioSource = gameObject.GetComponent<AudioSource>();
+
         equippedWeapon = singleshot;
         equip(singleshot);
+
+        Time.timeScale = 1f;       
         
     }
 
@@ -148,7 +170,12 @@ public class FPSController : MonoBehaviour
             yVelocity = 0f;
             jumpCount = jumpMax;
             fuel = fuelMax;
+            //if(!wasGrounded){
+                //if(sound_land != null) playSound(sound_land);
+            //}
             grounded = true;
+            wasGrounded = true;
+
 
             //resetting available dashes
             if (dashCount < dashMax && dashTime <= .05f) {
@@ -159,6 +186,8 @@ public class FPSController : MonoBehaviour
             if (Input.GetKeyDown(KeyCode.Space) && jumping == 0) {
                 yVelocity = jumpHeight;
                 jumping = 6;
+                playSound(sound_jump);
+                wasGrounded = false;
             }
 
         } else {
@@ -170,6 +199,8 @@ public class FPSController : MonoBehaviour
             if (Input.GetKeyDown(KeyCode.Space) && jumpCount > 0) {
                 jumpCount -= 1;
                 yVelocity = jumpHeight;
+                playSound(sound_jump);
+                wasGrounded = false;
             }
 
         }
@@ -177,24 +208,55 @@ public class FPSController : MonoBehaviour
 
         Vector3 speed = new Vector3(0f, 0f, 0f);
 
+        bool walking = false;
         //standard movement
         if (Input.GetKey(KeyCode.W)) {
             speed += Vector3.forward * moveSpeed;
+            walking = true;
         }
         if (Input.GetKey(KeyCode.A)) {
             speed += Vector3.left * moveSpeed;
+            walking = true;
         }
         if (Input.GetKey(KeyCode.S)) {
             speed += Vector3.back * moveSpeed;
+            walking = true;
         }
         if (Input.GetKey(KeyCode.D)) {
             speed += Vector3.right * moveSpeed;
+            walking = true;
+        }
+
+        if(walking == true){
+            if(footstepElapsed == 0f){
+                footstepElapsed = Time.time;
+                float r = Random.Range(0f,1f);
+                if (r < 0.5f) {
+                    playSound(sound_footstep1);
+                } else {
+                    playSound(sound_footstep2);
+                }
+            } else {
+                Debug.Log(footstepElapsed);
+                if(Time.time - footstepElapsed >= timeBetweenFootsteps){
+                    float r = Random.Range(0f,1f);
+                    if (r < 0.5f) {
+                        playSound(sound_footstep1);
+                    } else {
+                        playSound(sound_footstep2);
+                    }
+                    footstepElapsed = Time.time;
+                }
+            }
+        }else{
+            footstepElapsed = 0;
         }
 
         //dashing
         if (Input.GetKeyDown(KeyCode.LeftShift) && dashTime <= .05f && dashCount > 0) {
             dashTime += dashDuration;
             dashCount -= 1;
+            playSound(sound_dash);
         } 
 
         //applying gravity
@@ -233,15 +295,13 @@ public class FPSController : MonoBehaviour
         bool sloped = false;
 
         //case where ground is sloped
-        if (Physics.SphereCast(transform.position, .5f, Vector3.down, out hit, .7f) && jumping == 0 && hit.normal != Vector3.up) {
-            
+        if (Physics.SphereCast(transform.position, .5f, Vector3.down, out hit, .7f) && jumping == 0 && hit.normal != Vector3.up) {            
             Vector3 oldSpeed = speed;
             speed = Vector3.ProjectOnPlane(this.transform.TransformVector(speed), hit.normal);
             speed = this.transform.InverseTransformVector(speed);
             if (Vector3.Angle(Vector3.up, hit.normal) < maxScalableAngle) {
                 sloped = true;
             }
-            
         }
 
         //check y dir
@@ -263,9 +323,10 @@ public class FPSController : MonoBehaviour
         transform.Translate(speed * Time.deltaTime, Space.Self);
 
         //if player manages to Translate into the floor then move up a little bit
-        if (Physics.SphereCast(transform.position, .48f, Vector3.down, out hit, .65f)) {
-            transform.Translate(new Vector3(0, .65f - hit.distance, 0));
+        if (Physics.SphereCast(transform.position, .5f, Vector3.down, out hit, 0.65f)) {
+            transform.Translate(new Vector3(0, 0.65f - hit.distance, 0));
         }
+
 
     }
 
@@ -297,10 +358,8 @@ public class FPSController : MonoBehaviour
 
                 currentRapidDelay = rapidDelay;
             } else if (currentWeapon == 3 && currentHitscanDelay <= 0) {//hitscan
-
                 RaycastHit hit;
-                float hitscanRange = 1000f;
-                if (Physics.Raycast(firingPoint.position, firingPoint.forward, out hit, hitscanRange)) {//hit
+                if (Physics.Raycast(firingPoint.position, camObj.transform.forward, out hit, 9999f)) {//hit
                     //this is just the visual of the projectile
                     Vector3[] tempArray = {firingPoint.position, hit.point};
                     hitscanProjectile.GetComponent<LineRenderer>().SetPositions(tempArray);
@@ -319,7 +378,7 @@ public class FPSController : MonoBehaviour
 
                 } else {//miss
                     //this is just the visual of the projectile
-                    Vector3[] tempArray = {firingPoint.position, firingPoint.forward + (firingPoint.forward * hitscanRange)};
+                    Vector3[] tempArray = {firingPoint.position, camObj.transform.forward * 9999f};
                     hitscanProjectile.GetComponent<LineRenderer>().SetPositions(tempArray);
                 }
                 Instantiate(hitscanProjectile);
@@ -370,7 +429,11 @@ public class FPSController : MonoBehaviour
     public float getHealth () {
         return health;
     }
-    
+
+    public void playSound (AudioClip audioClip) {
+        audioSource.PlayOneShot(audioClip, 1f);
+    }
+
     public void unlockWeapon(int weapon) {
         if (weapon == 2) {
             unlockedRapid = true;
@@ -387,5 +450,4 @@ public class FPSController : MonoBehaviour
         equippedWeapon = equipping;
         equippedWeapon.SetActive(true);
     }
-
 }
